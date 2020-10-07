@@ -16,4 +16,4 @@ Run npm install command
 
 Run npm start
 
-Navigate to
+Navigate to localhost:8080 in the browser of your choice.
