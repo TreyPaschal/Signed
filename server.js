@@ -1,38 +1,110 @@
 const express = require('express')
 const app = express()
+
+var cors = require('cors');
+app.use(cors());
+
 var mongoose = require('mongoose');
-const port = 3000
+mongoose.set('useCreateIndex', true);
+
+const port = 8080
+
+app.use(express.json())
+app.use(express.urlencoded({
+    extended: true
+}))
+
+app.use(express.static('public'));
 
 var db = require('./config/db');
 console.log("connecting--",db);
 mongoose.connect(db.url);
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+var Artist = require('./app/models/artist');
 
-var Student = require('./app/models/student');
-app.get('/api/students', function(req, res) {
-   // use mongoose to get all students in the database
-   Student.find(function(err, students) {
-      // if there is an error retrieving, send the error.
-      // nothing after res.send(err) will execute
-      if (err)
-         res.send(err);
-      res.json(students); // return all students in JSON format
-   });
+app.get("/", function (request, response) {
+    response.sendFile(__dirname + '/views/index.html');
 });
 
-app.post('/api/students/send', function (req, res) {
-    var student = new Student(); // create a new instance of the student model
-    student.name = req.body.name; // set the student name (comes from the request)
-    student.save(function(err) {
+ app.get('/single', (req, res) => {
+
+    let artist = req.query.id;
+
+    Artist.find({
+        $text: {
+            $search: artist
+        }
+    }, function(err, result) {
+        if (err) throw err;
+        if (result) {
+            res.json(result)
+        } else {
+            res.send(JSON.stringify({
+                error : 'Error'
+            }))
+        }
+    })
+});
+
+app.post('/api/artists/send', function (req, res) {
+    var artist = new Artist();
+    artist.artist = req.body.artist;
+    artist.name = req.body.name;
+    artist.aci = req.body.aci;
+    artist.timestamp = req.body.timestamp;
+    artist.save(function(err) {
        if (err)
           res.send(err);
-          res.json({ message: 'student created!' });
+          res.json({ message: 'artist created!' });
     });
  });
 
+ //spotify
+ var SpotifyWebApi = require('spotify-web-api-node');
+
+var spotifyApi = new SpotifyWebApi({
+    clientId: '3f03adf3c3ff44c19241dc261776dfb2',
+    clientSecret: '8fe17622b35c43e5883199304e926d0e',
+});
+
+spotifyApi.clientCredentialsGrant()
+    .then(function (data) {
+        console.log('The access token expires in ' + data.body['expires_in']);
+        console.log('The access token is ' + data.body['access_token']);
+
+        // Save the access token so that it's used in future calls
+        spotifyApi.setAccessToken(data.body['access_token']);
+    }, function (err) {
+        console.log('Something went wrong when retrieving an access token', err.message);
+    });
+
+app.get("/", function (req, res) {
+    res.sendFile(__dirname + '/views/index.html');
+});
+
+app.get('/artist', (req, res) => {
+
+    let artistId = req.query.id;
+    //2hazSY4Ef3aB9ATXW7F5w3
+    spotifyApi.getArtist(artistId)
+        .then(function (data) {
+            var rank = parseInt(data.body.popularity) * parseInt(data.body.followers.total);
+            res.send(data.body);
+        }, function (err) {
+            console.error(err);
+        });
+});
+
+app.get('/search', (req, res) => {
+    let artistName = req.query.name;
+    spotifyApi.searchArtists(artistName)
+        .then(function (data) {
+            res.send(data.body);
+        }, function (err) {
+            console.error(err);
+        });
+    });
+    
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
 })

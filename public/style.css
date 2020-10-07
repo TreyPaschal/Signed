@@ -1,0 +1,28 @@
+
+body { 
+    background: url(bg.jpg) no-repeat center center fixed; 
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+  }
+
+
+.container{background-color: white; padding:0}   
+
+.content{
+   display:none;
+}
+
+.artist-info{
+    text-align: center;
+    margin-bottom: 25px;;
+}
+
+.left{background-color: black;}
+
+h1{text-align:center}
+
+.profile-card{
+    margin-top:15px;
+}
